@@ -42,9 +42,9 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     // Dock items (Bottom 5 primary apps)
-    val dockAppIds = listOf(AppId.PHONE, AppId.MESSAGES, AppId.SAMSUNG_NOTES, AppId.CAMERA, AppId.BROWSER)
+    val dockAppIds = listOf(AppId.PHONE, AppId.MESSAGES, AppId.SAMSUNG_NOTES, AppId.CAMERA, AppId.WHATSAPP)
     val dockApps = apps.filter { dockAppIds.contains(it.id) }
-    // Grid apps (Excluding dock apps from top grid or showing main launcher apps)
+    // Grid apps
     val gridApps = apps.filter { !dockAppIds.contains(it.id) }
 
     Column(
@@ -184,7 +184,7 @@ fun HomeScreen(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 280.dp),
+                    .heightIn(max = 300.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -207,7 +207,7 @@ fun HomeScreen(
             // Page dots
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 10.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -324,5 +324,11 @@ fun getIconForApp(appId: AppId): ImageVector {
         AppId.BROWSER -> Icons.Default.Language
         AppId.MUSIC -> Icons.Default.MusicNote
         AppId.WEATHER -> Icons.Default.Cloud
+        AppId.GALAXY_STORE -> Icons.Default.ShoppingBag
+        AppId.WHATSAPP -> Icons.Default.Chat
+        AppId.PHOTO_EDITOR -> Icons.Default.Brush
+        AppId.BRICK_BREAKER -> Icons.Default.SportsEsports
+        AppId.DEVICE_CARE -> Icons.Default.Security
+        AppId.TIC_TAC_TOE -> Icons.Default.Games
     }
 }

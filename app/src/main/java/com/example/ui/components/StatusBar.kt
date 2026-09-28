@@ -22,9 +22,11 @@ import com.example.ui.theme.Note10PunchHole
 fun StatusBar(
     timeString: String,
     batteryLevel: Int,
-    isWifi: Boolean,
-    isMuted: Boolean,
-    hasNotifications: Boolean,
+    isCharging: Boolean = false,
+    isWifi: Boolean = true,
+    networkType: String = "5G",
+    isMuted: Boolean = false,
+    hasNotifications: Boolean = false,
     onStatusClick: () -> Unit,
     modifier: Modifier = Modifier,
     isLightContent: Boolean = true
@@ -34,12 +36,12 @@ fun StatusBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(34.dp)
+            .height(36.dp)
             .clickable { onStatusClick() }
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 14.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Left Side: Time and Notification indicator
+        // Left Side: Live System Time and Notification indicator
         Row(
             modifier = Modifier.align(Alignment.CenterStart),
             verticalAlignment = Alignment.CenterVertically
@@ -61,24 +63,24 @@ fun StatusBar(
             }
         }
 
-        // Center: Galaxy Note 10 Punch-Hole Camera
+        // Center: Galaxy Note 10 Signature Punch-Hole Camera
         Box(
             modifier = Modifier
-                .size(14.dp)
+                .size(13.dp)
                 .clip(CircleShape)
                 .background(Note10PunchHole)
-                .padding(2.dp),
+                .padding(2.5.dp),
             contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(5.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E293B))
+                    .background(Color(0xFF0D1B2A))
             )
         }
 
-        // Right Side: Network, Wifi, Sound, Battery
+        // Right Side: Network, Wifi, Sound, Battery with Charging Bolt
         Row(
             modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically,
@@ -92,6 +94,7 @@ fun StatusBar(
                     modifier = Modifier.size(13.dp)
                 )
             }
+
             if (isWifi) {
                 Icon(
                     imageVector = Icons.Default.Wifi,
@@ -100,24 +103,50 @@ fun StatusBar(
                     modifier = Modifier.size(14.dp)
                 )
             }
+
+            Text(
+                text = networkType,
+                color = contentColor.copy(alpha = 0.9f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+
             Icon(
                 imageVector = Icons.Default.SignalCellular4Bar,
                 contentDescription = "Cellular",
                 tint = contentColor,
                 modifier = Modifier.size(13.dp)
             )
-            Text(
-                text = "$batteryLevel%",
-                color = contentColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Icon(
-                imageVector = Icons.Default.BatteryChargingFull,
-                contentDescription = "Battery",
-                tint = if (batteryLevel > 20) contentColor else Color(0xFFFF5252),
-                modifier = Modifier.size(14.dp)
-            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "$batteryLevel%",
+                    color = contentColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                if (isCharging) {
+                    Icon(
+                        imageVector = Icons.Default.Bolt,
+                        contentDescription = "جاري الشحن",
+                        tint = Color(0xFF00E676),
+                        modifier = Modifier.size(14.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = when {
+                            batteryLevel > 80 -> Icons.Default.BatteryFull
+                            batteryLevel > 50 -> Icons.Default.Battery6Bar
+                            batteryLevel > 20 -> Icons.Default.Battery3Bar
+                            else -> Icons.Default.BatteryAlert
+                        },
+                        contentDescription = "Battery",
+                        tint = if (batteryLevel > 20) contentColor else Color(0xFFFF5252),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
         }
     }
 }

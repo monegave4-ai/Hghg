@@ -1,6 +1,8 @@
 package com.example
 
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -19,6 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.AppId
 import com.example.ui.apps.*
@@ -33,6 +38,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        hideSystemBars()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
 
         setContent {
             val settings by viewModel.settingsState.collectAsStateWithLifecycle()
@@ -40,12 +51,26 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme(darkTheme = settings.isDarkMode) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Note10FrameDark
+                    color = Color.Black
                 ) {
                     PhoneRootContainer(viewModel = viewModel)
                 }
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemBars()
+        }
+    }
+
+    private fun hideSystemBars() {
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -59,15 +84,19 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
     val isSPenMenuOpen by viewModel.isSPenMenuOpen.collectAsStateWithLifecycle()
     val isRecentsOpen by viewModel.isRecentsViewOpen.collectAsStateWithLifecycle()
     val recentApps by viewModel.recentApps.collectAsStateWithLifecycle()
+    val isFloatingVideoOpen by viewModel.isFloatingVideoOpen.collectAsStateWithLifecycle()
+    val isSupabaseDialogOpen by viewModel.isSupabaseConfigDialogOpen.collectAsStateWithLifecycle()
 
     val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val timeString by viewModel.currentTimeString.collectAsStateWithLifecycle()
     val dateString by viewModel.currentDateString.collectAsStateWithLifecycle()
     val batteryLevel by viewModel.batteryLevel.collectAsStateWithLifecycle()
+    val isCharging by viewModel.isCharging.collectAsStateWithLifecycle()
     val isWifi by viewModel.isWifiEnabled.collectAsStateWithLifecycle()
     val isBluetooth by viewModel.isBluetoothEnabled.collectAsStateWithLifecycle()
     val isFlashlight by viewModel.isFlashlightOn.collectAsStateWithLifecycle()
     val isMuted by viewModel.isSoundMuted.collectAsStateWithLifecycle()
+    val networkType by viewModel.networkTypeLabel.collectAsStateWithLifecycle()
 
     val callState by viewModel.callState.collectAsStateWithLifecycle()
     val notifications by viewModel.notifications.collectAsStateWithLifecycle()
@@ -75,7 +104,6 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
     val messages by viewModel.allMessages.collectAsStateWithLifecycle()
     val notes by viewModel.notesList.collectAsStateWithLifecycle()
     val recordings by viewModel.recordingsList.collectAsStateWithLifecycle()
-    val galleryPhotos by viewModel.galleryPhotos.collectAsStateWithLifecycle()
     val virtualFiles by viewModel.virtualFiles.collectAsStateWithLifecycle()
     val weatherData by viewModel.weatherData.collectAsStateWithLifecycle()
 
@@ -136,17 +164,19 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                 )
             }
 
-            // Main OS Display Column
+            // Main OS Display Column (Edge-to-Edge Full Screen)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))
+                    .padding(top = 2.dp)
             ) {
-                // One UI Status Bar with Punch Hole Camera
+                // One UI Status Bar with Punch Hole Camera and Real Live Telemetry
                 StatusBar(
                     timeString = timeString,
                     batteryLevel = batteryLevel,
+                    isCharging = isCharging,
                     isWifi = isWifi,
+                    networkType = networkType,
                     isMuted = isMuted,
                     hasNotifications = notifications.isNotEmpty(),
                     onStatusClick = { viewModel.toggleQuickSettings() },
@@ -157,10 +187,10 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     if (isLocked) {
                         LockScreen(
+                            viewModel = viewModel,
                             timeString = timeString,
                             dateString = dateString,
                             batteryLevel = batteryLevel,
-                            onUnlock = { viewModel.toggleLockScreen(false) },
                             onQuickApp = { appId ->
                                 viewModel.toggleLockScreen(false)
                                 viewModel.openApp(appId)
@@ -198,7 +228,7 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                             )
 
                             AppId.CAMERA -> CameraApp(
-                                onCapturePhoto = { photoUri -> viewModel.addPhotoToGallery(photoUri) },
+                                onCapturePhoto = { photoUri -> viewModel.addCapturedPhoto(photoUri) },
                                 onOpenGallery = { viewModel.openApp(AppId.GALLERY) },
                                 onBack = { viewModel.goHome() }
                             )
@@ -217,14 +247,37 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                             )
 
                             AppId.GALLERY -> GalleryApp(
-                                userPhotos = galleryPhotos,
-                                onSetWallpaper = { wp -> viewModel.updateWallpaper(wp) },
+                                viewModel = viewModel,
                                 onBack = { viewModel.goHome() }
                             )
 
                             AppId.FILE_MANAGER -> FileManagerApp(
                                 files = virtualFiles,
                                 onBack = { viewModel.goHome() }
+                            )
+
+                            AppId.GALAXY_STORE -> GalaxyStoreApp(
+                                viewModel = viewModel
+                            )
+
+                            AppId.WHATSAPP -> WhatsAppApp(
+                                viewModel = viewModel
+                            )
+
+                            AppId.TIC_TAC_TOE -> TicTacToeOnlineApp(
+                                viewModel = viewModel
+                            )
+
+                            AppId.PHOTO_EDITOR -> PhotoEditorApp(
+                                viewModel = viewModel
+                            )
+
+                            AppId.BRICK_BREAKER -> BrickBreakerApp(
+                                viewModel = viewModel
+                            )
+
+                            AppId.DEVICE_CARE -> DeviceCareApp(
+                                viewModel = viewModel
                             )
 
                             AppId.SNAKE_GAME -> SnakeGameApp(
@@ -255,9 +308,9 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                             )
 
                             AppId.SETTINGS -> SettingsApp(
+                                viewModel = viewModel,
                                 settings = settings,
                                 onToggleDarkMode = { viewModel.toggleDarkMode() },
-                                onToggleLockScreen = { viewModel.toggleLockScreenSetting() },
                                 onSelectWallpaper = { wp -> viewModel.updateWallpaper(wp) },
                                 onBrightnessChange = { b -> viewModel.updateBrightness(b) },
                                 onVolumeChange = { v -> viewModel.updateVolume(v) },
@@ -290,7 +343,7 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                             )
 
                             else -> HomeScreen(
-                                apps = viewModel.allAppsList,
+                                apps = viewModel.baseAppsList,
                                 weather = weatherData,
                                 timeString = timeString,
                                 dateString = dateString,
@@ -303,7 +356,7 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                     } else {
                         // Home Screen Launcher
                         HomeScreen(
-                            apps = viewModel.allAppsList,
+                            apps = viewModel.baseAppsList,
                             weather = weatherData,
                             timeString = timeString,
                             dateString = dateString,
@@ -314,13 +367,13 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                         )
                     }
 
-                    // Floating S-Pen Button (Visible on Home and Apps when enabled)
+                    // Floating S-Pen Button positioned at the BOTTOM to avoid blocking screen view
                     if (!isLocked && currentApp != AppId.CAMERA) {
                         SPenFloatingButton(
                             onClick = { viewModel.toggleSPenMenu() },
                             modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 12.dp)
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 75.dp, end = 12.dp)
                         )
                     }
 
@@ -334,10 +387,20 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                         )
                     }
 
+                    // Floating Picture-in-Picture Video Player Overlay
+                    FloatingVideoPlayer(
+                        isOpen = isFloatingVideoOpen,
+                        onClose = { viewModel.isFloatingVideoOpen.value = false },
+                        onExpand = {
+                            viewModel.isFloatingVideoOpen.value = false
+                            viewModel.openApp(AppId.BROWSER)
+                        }
+                    )
+
                     // App Drawer
                     AppDrawer(
                         isOpen = isAppDrawerOpen,
-                        apps = viewModel.allAppsList,
+                        apps = viewModel.baseAppsList,
                         onOpenApp = { appId -> viewModel.openApp(appId) },
                         onClose = { viewModel.isAppDrawerOpen.value = false }
                     )
@@ -346,7 +409,7 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                     RecentsView(
                         isOpen = isRecentsOpen,
                         recentAppIds = recentApps,
-                        allApps = viewModel.allAppsList,
+                        allApps = viewModel.baseAppsList,
                         onOpenApp = { appId ->
                             viewModel.isRecentsViewOpen.value = false
                             viewModel.openApp(appId)
@@ -367,15 +430,15 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                         },
                         onOpenScreenWrite = {
                             viewModel.isSPenMenuOpen.value = false
-                            viewModel.openApp(AppId.SAMSUNG_NOTES)
+                            viewModel.openApp(AppId.PHOTO_EDITOR)
                         },
                         onOpenLiveMessage = {
                             viewModel.isSPenMenuOpen.value = false
-                            viewModel.openApp(AppId.MESSAGES)
+                            viewModel.openApp(AppId.WHATSAPP)
                         },
                         onOpenTranslate = {
                             viewModel.isSPenMenuOpen.value = false
-                            viewModel.openApp(AppId.BROWSER)
+                            viewModel.toggleFloatingVideo()
                         },
                         onClose = { viewModel.isSPenMenuOpen.value = false }
                     )
@@ -430,6 +493,14 @@ fun PhoneRootContainer(viewModel: PhoneViewModel) {
                         onToggleMute = { viewModel.toggleMute() },
                         onToggleSpeaker = { viewModel.toggleSpeaker() }
                     )
+
+                    // Supabase Cloud Configuration Dialog
+                    if (isSupabaseDialogOpen) {
+                        SupabaseConfigDialog(
+                            viewModel = viewModel,
+                            onDismiss = { viewModel.closeSupabaseConfigDialog() }
+                        )
+                    }
                 }
 
                 // One UI Navigation Bar (Recents |||, Home O, Back <)

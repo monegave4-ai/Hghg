@@ -26,77 +26,82 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.local.entities.GalleryPhotoEntity
+import com.example.data.model.AppId
 import com.example.ui.theme.*
-
-data class GalleryItem(
-    val id: String,
-    val title: String,
-    val album: String,
-    val drawableRes: Int? = null,
-    val gradientColors: List<Color> = listOf(AuraViolet, AuraMagenta)
-)
+import com.example.viewmodel.PhoneViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
 fun GalleryApp(
-    userPhotos: List<String>,
-    onSetWallpaper: (String) -> Unit,
+    viewModel: PhoneViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Photos, 1: Albums
-    var selectedPhoto by remember { mutableStateOf<GalleryItem?>(null) }
+    val activePhotos by viewModel.activeGalleryPhotos.collectAsState()
+    val trashPhotos by viewModel.trashGalleryPhotos.collectAsState()
 
-    // Pre-loaded Gallery Sample Items + Captured Photos
-    val initialItems = remember {
-        listOf(
-            GalleryItem("w1", "خلفية Aura Glow الرسمية", "الخلفيات", R.drawable.aura_glow_wp_1790583782504),
-            GalleryItem("w2", "سلسلة ألوان نوت 10", "الخلفيات", null, listOf(Color(0xFF00C6FF), Color(0xFF0072FF))),
-            GalleryItem("s1", "رسمة بقلم S-Pen", "رسومات القلم", null, listOf(Color(0xFFFF9A8B), Color(0xFFFF6A88))),
-            GalleryItem("s2", "مخطط تصميم Galaxy", "المستندات", null, listOf(Color(0xFF8EC5FC), Color(0xFFE0C3FC))),
-            GalleryItem("c1", "صورة احترافية 4K", "الكاميرا", null, listOf(Color(0xFF43E97B), Color(0xFF38F9D7)))
-        )
-    }
-
-    val allPhotos = initialItems + userPhotos.map { id ->
-        GalleryItem(id, "صورة كاميرا نوت 10", "الكاميرا", null, listOf(AuraViolet, AuraCyan))
-    }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Pictures, 1: Albums, 2: Trash
+    var selectedPhoto by remember { mutableStateOf<GalleryPhotoEntity?>(null) }
+    var selectedAlbumFilter by remember { mutableStateOf<String?>("الكل") }
 
     if (selectedPhoto != null) {
-        // Full Photo Viewer
+        val photo = selectedPhoto!!
+        val isTrash = photo.isDeleted
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // Full Image Display
+            // Main Image Box
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(vertical = 50.dp),
+                    .padding(vertical = 60.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedPhoto?.drawableRes != null) {
+                if (photo.uriOrResId == "note10_wallpaper") {
                     Image(
-                        painter = painterResource(id = selectedPhoto!!.drawableRes!!),
-                        contentDescription = selectedPhoto?.title,
+                        painter = painterResource(id = R.drawable.aura_glow_wp_1790583782504),
+                        contentDescription = photo.title,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .fillMaxHeight(0.75f)
+                            .fillMaxWidth(0.92f)
+                            .fillMaxHeight(0.78f)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Brush.linearGradient(selectedPhoto!!.gradientColors)),
+                            .background(
+                                Brush.linearGradient(
+                                    when {
+                                        photo.isCameraCaptured -> listOf(Color(0xFF0072DE), Color(0xFF00C6FF), Color(0xFFE91E63))
+                                        photo.filterApplied == "VINTAGE" -> listOf(Color(0xFFD7CCC8), Color(0xFF5D4037))
+                                        photo.filterApplied == "CYBERPUNK" -> listOf(Color(0xFF00E5FF), Color(0xFFE040FB))
+                                        else -> listOf(Color(0xFF8EC5FC), Color(0xFFE0C3FC))
+                                    }
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(80.dp)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = if (photo.isCameraCaptured) Icons.Default.CameraAlt else Icons.Default.Brush,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(photo.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(
+                                "ملتقطة بكاميرا سامسونج نوت 10 بدقة عالية",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
@@ -115,9 +120,9 @@ fun GalleryApp(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
                 Text(
-                    text = selectedPhoto?.title ?: "",
+                    text = photo.title,
                     color = Color.White,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = {}) {
@@ -125,45 +130,90 @@ fun GalleryApp(
                 }
             }
 
-            // Bottom Actions: Set Wallpaper, Share, Edit, Delete
+            // Bottom Actions Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .background(Color(0x80000000))
+                    .background(Color(0x99000000))
                     .padding(horizontal = 24.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        onSetWallpaper("aura_glow")
-                        selectedPhoto = null
+                if (isTrash) {
+                    // In Trash: Restore or Delete Forever
+                    Button(
+                        onClick = {
+                            viewModel.restorePhotoFromTrash(photo.id)
+                            selectedPhoto = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("استعادة الصورة", fontWeight = FontWeight.Bold)
                     }
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                    Button(
+                        onClick = {
+                            viewModel.permanentlyDeletePhoto(photo.id)
+                            selectedPhoto = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
+                    ) {
+                        Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("حذف نهائي", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    // Active photo: Set Wallpaper, Edit S-Pen, Move to Trash
+                    IconButton(
+                        onClick = {
+                            viewModel.updateWallpaper("aura_glow")
+                            selectedPhoto = null
+                            viewModel.vibrate(30)
+                        }
+                    ) {
                         Icon(Icons.Default.Wallpaper, contentDescription = "Set Wallpaper", tint = AuraCyan)
                     }
-                }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.Share, contentDescription = "Share", tint = Color.White)
-                }
-                IconButton(onClick = {}) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit S-Pen", tint = SPenGold)
-                }
-                IconButton(onClick = { selectedPhoto = null }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252))
+
+                    IconButton(
+                        onClick = {
+                            selectedPhoto = null
+                            viewModel.openApp(AppId.PHOTO_EDITOR)
+                        }
+                    ) {
+                        Icon(Icons.Default.Brush, contentDescription = "تعديل بقلم S-Pen", tint = Color(0xFFFF9800))
+                    }
+
+                    IconButton(
+                        onClick = {
+                            viewModel.sendWhatsAppMessage("@samsung_ai", "📸 أشارك معك صورة من استوديو نوت 10", "IMAGE")
+                            viewModel.openApp(AppId.WHATSAPP)
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "Share", tint = Color(0xFF25D366))
+                    }
+
+                    IconButton(
+                        onClick = {
+                            viewModel.movePhotoToTrash(photo.id)
+                            selectedPhoto = null
+                        }
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = "نقل لسلة المحذوفات", tint = Color(0xFFFF5252))
+                    }
                 }
             }
         }
     } else {
-        // Gallery Gallery Main Grid
+        // Main Gallery Screen
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color(0xFF0F121A))
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // App Top Bar
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,75 +223,269 @@ fun GalleryApp(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "الاستوديو (Gallery)",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
+                }
+
+                if (selectedTab == 2 && trashPhotos.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.emptyTrash() }) {
+                        Text("تفريغ السلة 🗑️", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
                 }
             }
 
-            // Tabs (Pictures, Albums)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.Start
+            // Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                contentColor = Color(0xFF9C27B0)
             ) {
-                DialerTabItem("الصور (${allPhotos.size})", selectedTab == 0) { selectedTab = 0 }
-                Spacer(modifier = Modifier.width(16.dp))
-                DialerTabItem("الألبومات", selectedTab == 1) { selectedTab = 1 }
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("الصور (${activePhotos.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                    icon = { Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("الألبومات", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                    icon = { Icon(Icons.Default.Collections, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("سلة المحذوفات (${trashPhotos.size})", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                    icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                )
             }
 
-            Divider(color = Color(0xFF222838), modifier = Modifier.padding(top = 8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Grid
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(allPhotos, key = { it.id }) { photo ->
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1E2330))
-                            .clickable { selectedPhoto = photo }
-                            .testTag("gallery_photo_item"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (photo.drawableRes != null) {
-                            Image(
-                                painter = painterResource(id = photo.drawableRes),
-                                contentDescription = photo.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Brush.linearGradient(photo.gradientColors)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(32.dp)
+            when (selectedTab) {
+                0 -> {
+                    // Pictures Grid
+                    if (activePhotos.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.PhotoCamera, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("لا توجد صور حالياً", fontWeight = FontWeight.Bold)
+                                Text("التقط صوراً بالكاميرا أو ارسم بـ S-Pen لتظهر هنا", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(activePhotos, key = { it.id }) { photo ->
+                                GalleryPhotoGridItem(
+                                    photo = photo,
+                                    onClick = { selectedPhoto = photo }
                                 )
                             }
                         }
                     }
                 }
+                1 -> {
+                    // Albums View
+                    val cameraPhotos = activePhotos.filter { it.isCameraCaptured }
+                    val drawingPhotos = activePhotos.filter { !it.isCameraCaptured }
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AlbumCardItem(
+                            title = "الكاميرا (Camera)",
+                            count = cameraPhotos.size,
+                            icon = Icons.Default.CameraAlt,
+                            gradient = listOf(Color(0xFF0072DE), Color(0xFF00C6FF)),
+                            onClick = { selectedTab = 0 }
+                        )
+
+                        AlbumCardItem(
+                            title = "رسومات S-Pen والمعدلة",
+                            count = drawingPhotos.size,
+                            icon = Icons.Default.Brush,
+                            gradient = listOf(Color(0xFFFF9800), Color(0xFFFF5722)),
+                            onClick = { selectedTab = 0 }
+                        )
+
+                        AlbumCardItem(
+                            title = "الخلفيات الرسمية Note 10",
+                            count = 2,
+                            icon = Icons.Default.Wallpaper,
+                            gradient = listOf(AuraViolet, AuraMagenta),
+                            onClick = { selectedTab = 0 }
+                        )
+                    }
+                }
+                2 -> {
+                    // Trash / Recycle Bin
+                    if (trashPhotos.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(52.dp), tint = Color.Gray)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text("سلة المحذوفات فارغة", fontWeight = FontWeight.Bold)
+                                Text("الصور المحذوفة ستبقى هنا 30 يوماً قبل حذفها نهائياً.", fontSize = 12.sp, color = Color.Gray)
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                            ) {
+                                Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("اضغط على أي صورة لاستعادتها أو حذفها نهائياً", fontSize = 11.sp, color = MaterialTheme.colorScheme.onErrorContainer)
+                                }
+                            }
+
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                items(trashPhotos, key = { it.id }) { photo ->
+                                    GalleryPhotoGridItem(
+                                        photo = photo,
+                                        onClick = { selectedPhoto = photo }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GalleryPhotoGridItem(
+    photo: GalleryPhotoEntity,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .testTag("gallery_photo_item"),
+        contentAlignment = Alignment.Center
+    ) {
+        if (photo.uriOrResId == "note10_wallpaper") {
+            Image(
+                painter = painterResource(id = R.drawable.aura_glow_wp_1790583782504),
+                contentDescription = photo.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            if (photo.isCameraCaptured) listOf(Color(0xFF0072DE), Color(0xFF00C6FF))
+                            else listOf(Color(0xFFFF9800), Color(0xFFE91E63))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (photo.isCameraCaptured) Icons.Default.CameraAlt else Icons.Default.Brush,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+
+        // Camera / S-Pen Badge
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.5f))
+                .padding(4.dp)
+        ) {
+            Icon(
+                imageVector = if (photo.isCameraCaptured) Icons.Default.CameraAlt else Icons.Default.Brush,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun AlbumCardItem(
+    title: String,
+    count: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    gradient: List<Color>,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Brush.linearGradient(gradient)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("$count صورة", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

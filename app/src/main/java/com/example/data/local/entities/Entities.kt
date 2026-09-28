@@ -60,8 +60,66 @@ data class AppSettingsEntity(
     val isDarkMode: Boolean = true,
     val isLockScreenEnabled: Boolean = true,
     val lockPin: String = "1234",
+    val isFingerprintEnabled: Boolean = true,
+    val isFaceUnlockEnabled: Boolean = true,
     val screenBrightness: Float = 0.85f,
     val mediaVolume: Float = 0.8f,
     val sPenSoundEnabled: Boolean = true,
-    val edgePanelEnabled: Boolean = true
+    val edgePanelEnabled: Boolean = true,
+    val currentWhatsAppUsername: String = "@galaxy_user"
+)
+
+@Entity(tableName = "store_apps")
+data class StoreAppEntity(
+    @PrimaryKey val packageName: String,
+    val appName: String,
+    val developerName: String,
+    val iconBgColor: String = "#0072DE",
+    val iconSymbol: String = "apps",
+    val category: String = "أدوات", // أدوات, ألعاب, تواصل, إنتاجية, وسائط
+    val description: String,
+    val version: String = "1.0.0",
+    val downloadsCount: Int = 120,
+    val rating: Float = 4.8f,
+    val sizeFormatted: String = "14 MB",
+    val isInstalled: Boolean = false,
+    val isCommunityPublished: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "gallery_photos")
+data class GalleryPhotoEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val uriOrResId: String,
+    val isCameraCaptured: Boolean = true,
+    val filterApplied: String = "NONE",
+    val drawingStrokesJson: String = "",
+    val timestamp: Long = System.currentTimeMillis(),
+    val isDeleted: Boolean = false,
+    val deletedTimestamp: Long = 0L
+)
+
+@Entity(tableName = "whatsapp_users")
+data class WhatsAppUserEntity(
+    @PrimaryKey val username: String, // e.g. @samsung_dev
+    val displayName: String,
+    val statusBio: String = "متاح على واتساب نوت 10",
+    val avatarColorHex: String = "#25D366",
+    val isOnline: Boolean = true,
+    val lastSeenFormatted: String = "متصل الآن",
+    val isSelf: Boolean = false
+)
+
+@Entity(tableName = "whatsapp_messages")
+data class WhatsAppMessageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val conversationUsername: String,
+    val senderUsername: String,
+    val text: String,
+    val timestamp: Long = System.currentTimeMillis(),
+    val isFromMe: Boolean = true,
+    val isRead: Boolean = true,
+    val mediaType: String = "TEXT", // TEXT, IMAGE, VOICE, APK
+    val mediaUri: String = ""
 )

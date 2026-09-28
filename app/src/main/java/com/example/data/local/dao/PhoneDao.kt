@@ -93,3 +93,81 @@ interface SettingsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdateSettings(settings: AppSettingsEntity)
 }
+
+@Dao
+interface StoreAppDao {
+    @Query("SELECT * FROM store_apps ORDER BY isCommunityPublished DESC, downloadsCount DESC")
+    fun getAllStoreApps(): Flow<List<StoreAppEntity>>
+
+    @Query("SELECT * FROM store_apps WHERE isInstalled = 1")
+    fun getInstalledApps(): Flow<List<StoreAppEntity>>
+
+    @Query("SELECT * FROM store_apps WHERE packageName = :packageName LIMIT 1")
+    suspend fun getAppByPackage(packageName: String): StoreAppEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateApp(app: StoreAppEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllApps(apps: List<StoreAppEntity>)
+
+    @Query("UPDATE store_apps SET isInstalled = :isInstalled WHERE packageName = :packageName")
+    suspend fun updateInstallState(packageName: String, isInstalled: Boolean)
+
+    @Delete
+    suspend fun deleteApp(app: StoreAppEntity)
+}
+
+@Dao
+interface GalleryPhotoDao {
+    @Query("SELECT * FROM gallery_photos WHERE isDeleted = 0 ORDER BY timestamp DESC")
+    fun getActivePhotos(): Flow<List<GalleryPhotoEntity>>
+
+    @Query("SELECT * FROM gallery_photos WHERE isDeleted = 1 ORDER BY deletedTimestamp DESC")
+    fun getTrashPhotos(): Flow<List<GalleryPhotoEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPhoto(photo: GalleryPhotoEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllPhotos(photos: List<GalleryPhotoEntity>)
+
+    @Query("UPDATE gallery_photos SET isDeleted = 1, deletedTimestamp = :deletedTime WHERE id = :id")
+    suspend fun moveToTrash(id: Long, deletedTime: Long = System.currentTimeMillis())
+
+    @Query("UPDATE gallery_photos SET isDeleted = 0, deletedTimestamp = 0 WHERE id = :id")
+    suspend fun restoreFromTrash(id: Long)
+
+    @Query("DELETE FROM gallery_photos WHERE id = :id")
+    suspend fun permanentlyDeletePhoto(id: Long)
+
+    @Query("DELETE FROM gallery_photos WHERE isDeleted = 1")
+    suspend fun emptyTrash()
+}
+
+@Dao
+interface WhatsAppDao {
+    @Query("SELECT * FROM whatsapp_users ORDER BY isOnline DESC, displayName ASC")
+    fun getAllUsers(): Flow<List<WhatsAppUserEntity>>
+
+    @Query("SELECT * FROM whatsapp_users WHERE username = :username LIMIT 1")
+    suspend fun getUserByUsername(username: String): WhatsAppUserEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertUser(user: WhatsAppUserEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllUsers(users: List<WhatsAppUserEntity>)
+
+    @Query("SELECT * FROM whatsapp_messages WHERE conversationUsername = :username ORDER BY timestamp ASC")
+    fun getMessagesForUser(username: String): Flow<List<WhatsAppMessageEntity>>
+
+    @Query("SELECT * FROM whatsapp_messages ORDER BY timestamp DESC")
+    fun getAllMessages(): Flow<List<WhatsAppMessageEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessage(message: WhatsAppMessageEntity): Long
+
+    @Query("DELETE FROM whatsapp_messages WHERE conversationUsername = :username")
+    suspend fun deleteConversation(username: String)
+}

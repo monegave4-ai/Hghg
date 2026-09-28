@@ -18,7 +18,13 @@ enum class AppId {
     SETTINGS,
     BROWSER,
     MUSIC,
-    WEATHER
+    WEATHER,
+    GALAXY_STORE,
+    WHATSAPP,
+    PHOTO_EDITOR,
+    BRICK_BREAKER,
+    DEVICE_CARE,
+    TIC_TAC_TOE
 }
 
 data class AppItem(
@@ -27,7 +33,9 @@ data class AppItem(
     val iconName: String,
     val iconBgColor: Color,
     val isSystemApp: Boolean = true,
-    val notificationCount: Int = 0
+    val notificationCount: Int = 0,
+    val customPackageName: String? = null,
+    val isInstalled: Boolean = true
 )
 
 data class CallState(
@@ -69,7 +77,8 @@ data class DrawingStroke(
     val points: List<StrokePoint>,
     val color: Long,
     val width: Float,
-    val isEraser: Boolean = false
+    val isEraser: Boolean = false,
+    val isHighlighter: Boolean = false
 )
 
 // Snake Game Models
@@ -87,6 +96,22 @@ data class SnakeGameState(
     val isPaused: Boolean = false,
     val speedDelayMs: Long = 140L,
     val gridSize: Int = 20
+)
+
+// Brick Breaker Game Models
+data class Brick(val x: Float, val y: Float, val width: Float, val height: Float, val color: Color, var isDestroyed: Boolean = false)
+data class BrickGameState(
+    val paddleX: Float = 0.5f,
+    val ballX: Float = 0.5f,
+    val ballY: Float = 0.75f,
+    val ballSpeedX: Float = 0.012f,
+    val ballSpeedY: Float = -0.014f,
+    val score: Int = 0,
+    val lives: Int = 3,
+    val isGameOver: Boolean = false,
+    val isWon: Boolean = false,
+    val isPlaying: Boolean = false,
+    val bricks: List<Brick> = emptyList()
 )
 
 // Weather Models
@@ -115,3 +140,14 @@ data class MusicTrack(
     val durationSeconds: Int,
     val coverGradient: List<Color>
 )
+
+// Photo Filter Enum
+enum class PhotoFilterType {
+    NONE,
+    VINTAGE,
+    NOIR,
+    CYBERPUNK,
+    WARM_SUNSET,
+    COLD_AURORA,
+    NEON_GLOW
+}
