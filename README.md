@@ -1,11 +1,65 @@
-<div align="center">
+# 📱 Samsung Galaxy Note 10 - Virtual Android OS Simulator
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+تطبيق أندرويد متكامل يحاكي تجربة هاتف **Samsung Galaxy Note 10** بنظام **One UI**، مع جميع التطبيقات الحقيقية والوظائف المدمجة.
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 🌟 الميزات والتطبيقات المضمنة
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+- 📱 **هيكل وشاشة Note 10**: تصميم الحواف المنحنية، كاميرا الثقب (Punch-Hole)، شريط الحالة وشريط التنقل الكلاسيكي.
+- ✍️ **قلم S-Pen وقائمة Air Command**: لوحة رسم حرة، تدوين ملاحظات، ممحاة، واختيارات للألوان والسمك.
+- 📞 **الهاتف وسجل الاتصال (Phone & Dialer)**: لوحة اتصال T9، جهات الاتصال، ومحاكاة كاملة للمكالمات الحية.
+- 💬 **الرسائل (Messages - SMS)**: إرسال واستقبال الرسائل النصية مع ردود تلقائية ذكية.
+- 📷 **الكاميرا الاحترافية (Camera)**: دعم CameraX، فلاش، تبديل العدسات، والتقاط الصور.
+- 🎙️ **مسجل الصوت (Voice Recorder)**: تسجيل حي مع مخطط ترددات صوتية (Live Audio Waveform) ومشغل صوت.
+- 🖼️ **الاستوديو (Gallery)**: عارض صور كامل، وإمكانية تعيين الصور كخلفية للهاتف.
+- 📁 **مدير الملفات (My Files)**: تصفح الذاكرة الداخلية وتصنيفات الصور والمستندات.
+- 🐍 **لعبة الدودة الكلاسيكية (Snake Game)**: تحكم كامل عبر D-Pad واللمس، ونقاط ومكافآت وحفظ أعلى نتيجة.
+- 🧮 **الآلة الحاسبة (Calculator)**: واجهة One UI للعمليات الحسابية.
+- ⏰ **الساعة والمؤقت (Clock)**: ساعة إيقاف مع تسجيل الدورات (Laps)، منبهات، ومؤقت تنازلي.
+- ⚙️ **الضبط (Settings)**: معلومات الهاتف، وتغيير الخلفيات الرسمية مثل Aura Glow، والوضع الليلي Dark Mode.
+- 🌐 **متصفح الإنترنت (Samsung Internet)**: متصفح ويب مدمج.
+- 🎵 **الموسيقى (Samsung Music)**: مشغل موسيقى بقوائم تشغيل.
+- ⛅ **الطقس (Weather)**: توقعات الطقس الحية لعدة أيام.
 
-</div>
+---
+
+## 🚀 كيفية البناء والتشغيل عبر GitHub (CI / CD)
+
+المشروع مجهز بالكامل بملف سير عمل **GitHub Actions** (`.github/workflows/android_build.yml`):
+
+1. بمجرد رفع المشروع إلى مستودعك على **GitHub** (Push).
+2. سيبدأ تلقائياً بناء الـ APK عبر تبويب **Actions**.
+3. يمكنك تنزيل ملف الـ APK الجاهز للتثبيت مباشرة من قسم **Artifacts** باسم `Galaxy-Note-10-Debug-APK`.
+
+---
+
+## 💻 البناء المحلي عبر Terminal أو Android Studio
+
+### المتطلبات:
+- **JDK 17** أو أحدث.
+- **Android SDK (API 34/36)**.
+
+### الأوامر:
+```bash
+# إعطاء صلاحية التنفيذ للـ Wrapper (على Linux/macOS)
+chmod +x gradlew
+
+# تشغيل الاختبارات
+./gradlew testDebugUnitTest
+
+# بناء ملف APK التجريبي
+./gradlew assembleDebug
+
+# مسار ملف الـ APK الناتج:
+# app/build/outputs/apk/debug/app-debug.apk
+```
+
+---
+
+## 🛠️ التقنيات المستخدمة
+- **Kotlin** & **Jetpack Compose** (Material 3).
+- **Room Database** لتخزين جهات الاتصال، الرسائل، الملاحظات، والتسجيلات.
+- **CameraX** للتحكم بالكاميرا.
+- **Kotlin Coroutines & StateFlow** لإدارة الحالة.
+- **Gradle Version Catalog (libs.versions.toml)** لإدارة التبعيات.

@@ -1,0 +1,6 @@
+{
+  "name": "Galaxy Note 10",
+  "description": "Virtual Samsung Galaxy Note 10 smartphone experience featuring One UI, Camera, S-Pen Notes, Phone dialer, Messages, Snake game, Voice recorder, Gallery, and File Manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
